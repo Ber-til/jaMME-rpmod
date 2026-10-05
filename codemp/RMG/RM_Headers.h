@@ -7,6 +7,7 @@
 #pragma warning (push, 3)
 #include <vector>
 #include <list>
+#include <string>
 #pragma warning (pop)
 
 using namespace std;

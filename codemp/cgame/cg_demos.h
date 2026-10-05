@@ -103,8 +103,8 @@ typedef struct demoMain_s {
 		int			bone;
 		vec3_t		angles[MAX_BONES];
 		vec3_t		axis[3][MAX_BONES];
-		qboolean	override[MAX_CLIENTS];
-		demoAnimPoint_t *points[MAX_CLIENTS];
+		qboolean	override[MAX_CLIENTS_ARRAY];
+		demoAnimPoint_t *points[MAX_CLIENTS_ARRAY];
 	} anim;
 #endif
 	struct {

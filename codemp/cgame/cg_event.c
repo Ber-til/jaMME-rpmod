@@ -125,11 +125,11 @@ static void CG_Obituary( entityState_t *ent ) {
 		attacker = ENTITYNUM_WORLD;
 		attackerInfo = NULL;
 	} else {
-		attackerInfo = CG_ConfigString( CS_PLAYERS + attacker );
+		attackerInfo = CG_ConfigString( CS_PLAYER( attacker ) );
 		cia = &cgs.clientinfo[attacker];
 	}
 
-	targetInfo = CG_ConfigString( CS_PLAYERS + target );
+	targetInfo = CG_ConfigString( CS_PLAYER( target ) );
 	if ( !targetInfo ) {
 		return;
 	}

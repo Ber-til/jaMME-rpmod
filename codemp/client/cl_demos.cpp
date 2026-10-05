@@ -11,7 +11,9 @@ demo_t demo;
 static entityState_t	demoNullEntityState;
 static playerState_t	demoNullPlayerState;
 
-static const char *demoHeader = JK_VERSION " Demo";
+// both headers must have the same length
+static const char *demoHeader = JK_VERSION " Dm64";			// up to 64 player states per frame
+static const char *demoHeaderLegacy = JK_VERSION " Demo";	// up to 32 player states per frame
 
 static void demoFrameAddString( demoString_t *string, int num, const char *newString) {
 	int			dataLeft, len;
@@ -52,7 +54,7 @@ static void demoFrameAddString( demoString_t *string, int num, const char *newSt
 	Com_Memcpy( string->data, cache, string->used );
 }
 
-static void demoFrameUnpack( msg_t *msg, demoFrame_t *oldFrame, demoFrame_t *newFrame, qboolean *firstPack ) {
+static void demoFrameUnpack( msg_t *msg, demoFrame_t *oldFrame, demoFrame_t *newFrame, qboolean *firstPack, int clientSlots ) {
 	int last;
 	qboolean isDelta = MSG_ReadBits( msg, 1 ) ? qfalse : qtrue;
 	if (!isDelta)
@@ -83,7 +85,7 @@ static void demoFrameUnpack( msg_t *msg, demoFrame_t *oldFrame, demoFrame_t *new
     /* Extract player states */
 	Com_Memset( newFrame->clientData, 0, sizeof( newFrame->clientData ));
 	last = MSG_ReadByte( msg );
-	while (last < MAX_CLIENTS) {
+	while (last >= 0 && last < clientSlots) {
 		playerState_t *oldPlayer, *newPlayer;
 		playerState_t *oldVeh, *newVeh;
 		newFrame->clientData[last] = 1;
@@ -168,7 +170,7 @@ static void demoFramePack( msg_t *msg, const demoFrame_t *newFrame, const demoFr
 	}
 	MSG_WriteShort( msg, MAX_CONFIGSTRINGS );
 	/* Add the playerstates */
-	for (i=0; i<MAX_CLIENTS; i++) {
+	for (i=0; i<MAX_CLIENTS_EXTENDED; i++) {
 		const playerState_t *oldPlayer, *newPlayer;
 		const playerState_t *oldVeh, *newVeh;
 		if (!newFrame->clientData[i])
@@ -183,7 +185,7 @@ static void demoFramePack( msg_t *msg, const demoFrame_t *newFrame, const demoFr
 			MSG_WriteDeltaPlayerstate( msg, (playerState_t *)oldVeh, (playerState_t *)newVeh, qtrue );
 		}
 	}
-	MSG_WriteByte( msg, MAX_CLIENTS );
+	MSG_WriteByte( msg, MAX_CLIENTS_EXTENDED );
 	/* Add the entities */
 	for (i=0; i<MAX_GENTITIES-1; i++) {
 		const entityState_t *oldEntity, *newEntity;
@@ -226,14 +228,20 @@ static void demoFramePack( msg_t *msg, const demoFrame_t *newFrame, const demoFr
 	}
 }
 
-static void demoFrameInterpolate( demoFrame_t frames[], int frameCount, int index ) {
+// same rule as cgame: vanilla servers cap sv_maxclients at 32
+static int demoClientSlots( const demoString_t *string ) {
+	const char *info = string->data + string->offsets[CS_SERVERINFO];
+	return atoi( Info_ValueForKey( info, "sv_maxclients" ) ) > MAX_CLIENTS_LEGACY ? MAX_CLIENTS_EXTENDED : MAX_CLIENTS_LEGACY;
+}
+
+static void demoFrameInterpolate( demoFrame_t frames[], int frameCount, int index, int clientSlots ) {
 	int i;
 	demoFrame_t *workFrame;
 
 	workFrame = &frames[index % frameCount];
 //	return;
 
-	for (i=0; i<MAX_CLIENTS; i++) {
+	for (i=0; i<clientSlots; i++) {
 		entityState_t *workEntity;
 		workEntity = &workFrame->entities[i];
 		if (workEntity->number != ENTITYNUM_NONE && !workFrame->entityData[i]) {
@@ -303,6 +311,7 @@ void demoConvert( const char *oldName, const char *newBaseName, qboolean smoothe
 	byte			oldData[ MAX_MSGLEN ];
 	int				oldTime, nextTime, fullTime;
 	int				clientNum;
+	int				clientSlots = MAX_CLIENTS_LEGACY;
 	demoFrame_t		*workFrame;
 	int				parseEntitiesNum = 0;
 	demoConvert_t	*convert;
@@ -404,7 +413,7 @@ void demoConvert( const char *oldName, const char *newBaseName, qboolean smoothe
 					demoFrameAddString( &workFrame->string, num, Cmd_ArgsFrom( 2 ) );	
 					break;
 				}
-				if ( clientNum >= 0 && clientNum < MAX_CLIENTS ) {
+				if ( clientNum >= 0 && clientNum < clientSlots ) {
 					int len = strlen( s ) + 1;
 					char *dst;
 					if (workFrame->commandUsed + len + 1 > sizeof( workFrame->commandData)) {
@@ -467,6 +476,7 @@ void demoConvert( const char *oldName, const char *newBaseName, qboolean smoothe
 						goto conversionerror;
 					}
 				}
+				clientSlots = demoClientSlots( &workFrame->string );
 				clientNum = MSG_ReadLong( &oldMsg );
 				/* Skip the checksum feed */
 				MSG_ReadLong( &oldMsg );
@@ -530,7 +540,7 @@ void demoConvert( const char *oldName, const char *newBaseName, qboolean smoothe
 				// read areamask
 				workFrame->areaUsed = MSG_ReadByte( &oldMsg );
 				MSG_ReadData( &oldMsg, workFrame->areamask, workFrame->areaUsed );
-				if (clientNum <0 || clientNum >= MAX_CLIENTS) {
+				if (clientNum <0 || clientNum >= clientSlots) {
 					Com_Printf("Got snapshot with invalid client.\n");
 					goto conversionerror;
 				}
@@ -621,7 +631,7 @@ void demoConvert( const char *oldName, const char *newBaseName, qboolean smoothe
 						MSG_Bitstream( &writeMsg );
 						newFrame = &convert->frames[ writeIndex  % DEMOCONVERTFRAMES];
 						if ( smoothen )
-							demoFrameInterpolate( convert->frames, DEMOCONVERTFRAMES, writeIndex );
+							demoFrameInterpolate( convert->frames, DEMOCONVERTFRAMES, writeIndex, clientSlots );
 						if ( nextTime > fullTime || writeIndex <= 0 ) {
 							/* Plan the next time for a full write */
 							fullTime = nextTime + 2000;
@@ -783,7 +793,7 @@ static void demoPlayForwardFrame( demoPlay_t *play ) {
 		play->frame = play->nextFrame;
 		play->nextFrame = copyFrame;
 	}
-	demoFrameUnpack( &msg, play->frame, play->nextFrame, &demo.firstPack );
+	demoFrameUnpack( &msg, play->frame, play->nextFrame, &demo.firstPack, play->clientSlots );
 	play->frameNumber++;
 }
 
@@ -906,7 +916,7 @@ static demoPlay_t *demoPlayOpen( const char* fileName ) {
 	demoPlay_t	*play;
 	fileHandle_t fileHandle;
 	int	fileSize, filePos;
-	int i;
+	int i, clientSlots;
 
 	msg_t msg;
 	fileSize = FS_FOpenFileRead( fileName, &fileHandle, qtrue );
@@ -916,7 +926,11 @@ static demoPlay_t *demoPlayOpen( const char* fileName ) {
 	}
 	filePos = strlen( demoHeader );
 	i = FS_Read( &demo.buffer, filePos, fileHandle );
-	if ( i != filePos || Q_strncmp( (char *)demo.buffer, demoHeader, filePos )) {
+	if ( i == filePos && !Q_strncmp( (char *)demo.buffer, demoHeader, filePos )) {
+		clientSlots = MAX_CLIENTS_EXTENDED;
+	} else if ( i == filePos && !Q_strncmp( (char *)demo.buffer, demoHeaderLegacy, filePos )) {
+		clientSlots = MAX_CLIENTS_LEGACY;
+	} else {
 		Com_Printf("demo file %s is wrong version\n", fileName );
 		FS_FCloseFile( fileHandle );
 		return 0;
@@ -932,6 +946,7 @@ static demoPlay_t *demoPlayOpen( const char* fileName ) {
 	memset( play, 0, sizeof(demoPlay_t) ); // In Q3MME the Z_Malloc doees a memset 0, it doesn't here though. So we gotta do it.
 	Q_strncpyz( play->fileName, fileName, sizeof( play->fileName ));
 	play->fileSize = fileSize;
+	play->clientSlots = clientSlots;
 	play->frame = &play->storageFrame[0];
 	play->nextFrame = &play->storageFrame[1];
 	for (i=0;i<DEMO_PLAY_CMDS;i++)
@@ -974,7 +989,7 @@ static demoPlay_t *demoPlayOpen( const char* fileName ) {
 	demo.firstPack = qtrue;
 	demoPlaySetIndex( play, 0 );
 	play->clientNum = -1;
-	for( i=0;i<MAX_CLIENTS;i++)
+	for( i=0;i<play->clientSlots;i++)
 		if (play->frame->clientData[i]) {
 			play->clientNum = i;
 			break;
@@ -1085,7 +1100,7 @@ qboolean demoGetSnapshot( int snapNumber, snapshot_t *snap ) {
 	demoPlaySynch( play, frame );
 	snap->serverCommandSequence = play->commandCount;
 	snap->serverTime = frame->serverTime;
-	if (play->clientNum >=0 && play->clientNum < MAX_CLIENTS) {
+	if (play->clientNum >=0 && play->clientNum < play->clientSlots) {
 		snap->ps = frame->clients[ play->clientNum ];
 		snap->vps = frame->vehs[ play->clientNum ];
 	} else {
@@ -1231,9 +1246,11 @@ static void demoPrecache( void ) {
 						demoPrecacheModel(str);
 					} else if ( num >= CS_SOUNDS && num < CS_SOUNDS+MAX_SOUNDS && (str[0] || str[1] == '$') ) {
 						if ( str[0] != '*' ) S_StartSound(vec3_origin, 0, CHAN_AUTO, -1, S_RegisterSound( str ));
-					} else if ( num >= CS_PLAYERS && num < CS_PLAYERS+MAX_CLIENTS ) {
+					} else if ( ( num >= CS_PLAYERS && num < CS_PLAYERS+MAX_CLIENTS_LEGACY )
+						|| ( demoClientSlots( &play->frame->string ) > MAX_CLIENTS_LEGACY && num >= CS_PLAYERS_EXTENDED
+						&& num < CS_PLAYERS_EXTENDED+MAX_CLIENTS_EXTENDED-MAX_CLIENTS_LEGACY ) ) {
 						demoPrecacheClient(str);
-					}	
+					}
 				}
 			}
 		}

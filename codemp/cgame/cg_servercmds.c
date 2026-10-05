@@ -227,7 +227,10 @@ void CG_ParseServerinfo( void ) {
 	if ( cgs.timelimit != i )
 		cg.timelimitWarnings &= ~(1|2);
 	cgs.timelimit = i;
-	cgs.maxclients = Com_Clampi( 0, MAX_CLIENTS, atoi( Info_ValueForKey( info, "sv_maxclients" ) ) );
+	// vanilla servers cap sv_maxclients at 32, more means entities 32-63 are clients too
+	i = atoi( Info_ValueForKey( info, "sv_maxclients" ) );
+	cgClientSlots = i > MAX_CLIENTS_LEGACY ? MAX_CLIENTS_EXTENDED : MAX_CLIENTS_LEGACY;
+	cgs.maxclients = Com_Clampi( 0, MAX_CLIENTS, i );
 	cgs.privateclients = Com_Clampi( 0, MAX_CLIENTS, atoi( Info_ValueForKey( info, "sv_privateClients" ) ) );
 	CG_Printf("\n");
 	gamename = Info_ValueForKey(info, "gamename");
@@ -1024,9 +1027,15 @@ static void CG_ConfigStringModified( void ) {
 		cg_beatingSiegeTime = atoi(str);
 		CG_SetSiegeTimerCvar ( cg_beatingSiegeTime );
 	}
-	else if ( num >= CS_PLAYERS && num < CS_PLAYERS+MAX_CLIENTS )
+	else if ( num >= CS_PLAYERS && num < CS_PLAYERS+MAX_CLIENTS_LEGACY )
 	{
 		CG_NewClientInfo( num - CS_PLAYERS, qtrue);
+		CG_BuildSpectatorString();
+	}
+	else if ( MAX_CLIENTS > MAX_CLIENTS_LEGACY && num >= CS_PLAYERS_EXTENDED
+		&& num < CS_PLAYERS_EXTENDED+MAX_CLIENTS-MAX_CLIENTS_LEGACY )
+	{
+		CG_NewClientInfo( num - CS_PLAYERS_EXTENDED + MAX_CLIENTS_LEGACY, qtrue);
 		CG_BuildSpectatorString();
 	} else if ( num == CS_FLAGSTATUS ) {
 		if( cgs.gametype == GT_CTF || cgs.gametype == GT_CTY ) {

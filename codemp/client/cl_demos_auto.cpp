@@ -22,7 +22,7 @@ char *demoAutoFormat(const char* name) {
 	struct tm tt;
 
 	char playerName[MAX_QPATH], serverName[MAX_QPATH], mapName[MAX_QPATH];
-	Q_strncpyz(playerName, COM_SkipPath(Info_ValueForKey((cl.gameState.stringData + cl.gameState.stringOffsets[CS_PLAYERS+cl.snap.ps.clientNum]), "n")), sizeof(playerName));
+	Q_strncpyz(playerName, COM_SkipPath(Info_ValueForKey((cl.gameState.stringData + cl.gameState.stringOffsets[CS_PLAYER(cl.snap.ps.clientNum)]), "n")), sizeof(playerName));
 	Q_strncpyz(serverName, COM_SkipPath(Info_ValueForKey((cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO]), "sv_hostname")), sizeof(serverName));
 	Q_strncpyz(mapName, COM_SkipPath(Info_ValueForKey((cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO]), "mapname")), sizeof(mapName));
 	Q_StripColor(playerName, cls.cTable);

@@ -274,6 +274,21 @@ void CL_DoAutoLODScale(void)
 	Cvar_Set( "r_autolodscalevalue", va("%f", finalLODScaleFactor) );
 }
 
+// same rule as cgame: vanilla servers cap sv_maxclients at 32
+static int CL_ClientSlots( void ) {
+	const char *info = cl.gameState.stringData + cl.gameState.stringOffsets[ CS_SERVERINFO ];
+	return atoi( Info_ValueForKey( info, "sv_maxclients" ) ) > MAX_CLIENTS_LEGACY ? MAX_CLIENTS_EXTENDED : MAX_CLIENTS_LEGACY;
+}
+
+static int CL_CountClients( void ) {
+	int i, count = 0, slots = CL_ClientSlots();
+	for ( i = 0; i < slots; i++ ) {
+		if ( cl.gameState.stringData[ cl.gameState.stringOffsets[ CS_PLAYER( i ) ] ] )
+			count++;
+	}
+	return count;
+}
+
 extern void CL_PrintGameState_f(void);
 /*
 =====================
@@ -346,25 +361,10 @@ void CL_ConfigstringModified( void ) {
 
 	if (cl_autolodscale && cl_autolodscale->integer)
 	{
-		if (index >= CS_PLAYERS &&
-			index < CS_G2BONES)
+		if ((index >= CS_PLAYERS && index < CS_G2BONES) ||
+			(index >= CS_PLAYERS_EXTENDED && index < CS_PLAYERS_EXTENDED+MAX_CLIENTS_EXTENDED-MAX_CLIENTS_LEGACY))
 		{ //this means that a client was updated in some way. Go through and count the clients.
-			int clientCount = 0;
-			i = CS_PLAYERS;
-
-			while (i < CS_G2BONES)
-			{
-				s = cl.gameState.stringData + cl.gameState.stringOffsets[ i ];
-
-				if (s && s[0])
-				{
-					clientCount++;
-				}
-
-				i++;
-			}
-
-			gCLTotalClientNum = clientCount;
+			gCLTotalClientNum = CL_CountClients();
 
 #ifdef _DEBUG
 			Com_DPrintf("%i clients\n", gCLTotalClientNum);
@@ -455,7 +455,6 @@ void CL_CheckSVStringEdRef(char *buf, const char *str)
 
 void CL_ServerCommandNotification( const char *s ) {
 	const char	*cmd;
-	int			i;
 	int			flags = 0;
 	static qboolean intermission = qfalse;
 	flags = cls.notification.flags & ~NOTIFICATION_FULL;
@@ -475,16 +474,7 @@ void CL_ServerCommandNotification( const char *s ) {
 		char strEd[MAX_STRINGED_SV_STRING];
 		cmd = Cmd_Argv(1);
 		if (Q_stristr(cmd, "@@@PLCONNECT")) {
-			int players = 0;
-			for (i = 0; i < MAX_CLIENTS; i++) {
-				const char *configString;
-
-				configString = cl.gameState.stringData + cl.gameState.stringOffsets[ i + CS_PLAYERS ];
-				if (!configString[0])
-					continue;
-
-				players++;
-			}
+			int players = CL_CountClients();
 			if (players == cls.notification.playersCount && (flags & NOTIFICATION_PLAYERS)) {
 //				CL_ShowNotification(players == 1 ? "1 player connected" : va("%d players connected", players));
 				CL_CheckSVStringEdRef(strEd, "@@@PLCONNECT");

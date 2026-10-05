@@ -906,7 +906,7 @@ void CG_MultiSpec_f(void) {
 		for (i = 0; i < MAX_CLIENTS; i++) {
 			const char *configString;
 
-			configString = CG_ConfigString(i + CS_PLAYERS);
+			configString = CG_ConfigString(CS_PLAYER(i));
 			if (!configString[0])
 				continue;
 

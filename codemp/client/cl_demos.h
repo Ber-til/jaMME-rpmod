@@ -26,14 +26,14 @@ typedef struct {
 
 typedef struct {
 	int			serverTime;
-	playerState_t clients[MAX_CLIENTS];
-	playerState_t vehs[MAX_CLIENTS];
-	byte		clientData[MAX_CLIENTS];
+	playerState_t clients[MAX_CLIENTS_EXTENDED];
+	playerState_t vehs[MAX_CLIENTS_EXTENDED];
+	byte		clientData[MAX_CLIENTS_EXTENDED];
 	entityState_t entities[MAX_GENTITIES];
 	byte		entityData[MAX_GENTITIES];
 	entityState_t entityBaselines[MAX_GENTITIES];
 	int			commandUsed;
-	char		commandData[2048*MAX_CLIENTS];
+	char		commandData[2048*MAX_CLIENTS_EXTENDED];
 	byte		areaUsed;
 	byte		areamask[MAX_MAP_AREA_BYTES];
 	demoString_t string;
@@ -64,6 +64,7 @@ typedef struct {
 	int					commandStart[DEMO_PLAY_CMDS];
 	int					commandCount;
 	int					clientNum;
+	int					clientSlots;		// player states per frame, depends on file version
 	demoFrame_t			storageFrame[FRAME_BUF_SIZE];
 	demoFrame_t			*frame, *nextFrame;
 	qboolean			nextValid;

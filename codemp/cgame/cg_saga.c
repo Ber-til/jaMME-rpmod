@@ -987,7 +987,7 @@ void CG_SiegeObjectiveCompleted(centity_t *ent, int won, int objectivenum)
 	}
 }
 
-siegeExtended_t cg_siegeExtendedData[MAX_CLIENTS];
+siegeExtended_t cg_siegeExtendedData[MAX_CLIENTS_ARRAY];
 
 //parse a single extended siege data entry
 void CG_ParseSiegeExtendedDataEntry(const char *conStr)

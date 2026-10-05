@@ -2112,7 +2112,18 @@ typedef enum {
 //
 // per-level limits
 //
-#define	MAX_CLIENTS			32		// absolute limit
+#define	MAX_CLIENTS_LEGACY		32		// vanilla client slots, also the first non-client entity number on vanilla servers
+#define	MAX_CLIENTS_EXTENDED	64		// client slots on 64 player servers (RPMod and other OpenJK forks)
+#ifdef CGAME
+// the cgame plays demos from both kinds of servers, so whether entity numbers 32-63
+// are players is decided at runtime from sv_maxclients, see CG_ParseServerinfo
+extern int cgClientSlots;
+#define	MAX_CLIENTS				cgClientSlots
+#define	MAX_CLIENTS_ARRAY		MAX_CLIENTS_EXTENDED	// use for array sizes instead of MAX_CLIENTS
+#else
+#define	MAX_CLIENTS				MAX_CLIENTS_LEGACY		// absolute limit
+#define	MAX_CLIENTS_ARRAY		MAX_CLIENTS
+#endif
 #define MAX_RADAR_ENTITIES	MAX_GENTITIES
 #define MAX_TERRAINS		1//32 //rwwRMG: inserted
 #define MAX_LOCATIONS		64

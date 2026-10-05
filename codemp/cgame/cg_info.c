@@ -58,7 +58,7 @@ void CG_LoadingClient( int clientNum ) {
 	const char		*info;
 	char			personality[MAX_QPATH];
 
-	info = CG_ConfigString( CS_PLAYERS + clientNum );
+	info = CG_ConfigString( CS_PLAYER( clientNum ) );
 
 /*
 	char			model[MAX_QPATH];

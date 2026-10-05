@@ -1538,7 +1538,7 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 		k++;
 	}
 
-	strings[5] = CG_ConfigString( clientNum + CS_PLAYERS );
+	strings[5] = CG_ConfigString( CS_PLAYER( clientNum ) );
 	if ( !strings[5][0] ) {
 		if (ci->ghoul2Model && trap_G2_HaveWeGhoul2Models(ci->ghoul2Model)) {
 			//clean this stuff up first
@@ -2189,7 +2189,7 @@ void CG_ClientOverride_f(void) {
 			const char *configString, *overrideString;
 
 			overrideString = cgs.clientOverride[i];
-			configString = CG_ConfigString( i + CS_PLAYERS );
+			configString = CG_ConfigString( CS_PLAYER( i ) );
 			if ( !configString[0] ) 
 				continue;
 

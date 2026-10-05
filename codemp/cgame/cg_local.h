@@ -921,7 +921,7 @@ typedef struct {
 	int			numScores;
 	int			selectedScore;
 	int			teamScores[2];
-	score_t		scores[MAX_CLIENTS];
+	score_t		scores[MAX_CLIENTS_ARRAY];
 	qboolean	showScores;
 	qboolean	scoreBoardShowing;
 	int			scoreFadeTime;
@@ -936,7 +936,7 @@ typedef struct {
 	int				spectatorPaintLen; 									// current offset from start
 
 	// skull trails
-	skulltrail_t	skulltrails[MAX_CLIENTS];
+	skulltrail_t	skulltrails[MAX_CLIENTS_ARRAY];
 
 	// centerprinting
 	int			centerPrintTime;
@@ -1027,7 +1027,7 @@ typedef struct {
 	float		bobfracsin;
 	int			bobcycle;
 	int			bobcyclePrev;
-	int			bobCycle[MAX_CLIENTS];
+	int			bobCycle[MAX_CLIENTS_ARRAY];
 	float		xyspeed;
 	int			nextOrbitTime;
 
@@ -1073,10 +1073,10 @@ Ghoul2 Insert End
 	char				sharedBuffer[MAX_CG_SHARED_BUFFER_SIZE];
 
 	short				radarEntityCount;
-	short				radarEntities[MAX_CLIENTS+16];
+	short				radarEntities[MAX_CLIENTS_ARRAY+16];
 
 	short				bracketedEntityCount;
-	short				bracketedEntities[MAX_CLIENTS+16];
+	short				bracketedEntities[MAX_CLIENTS_ARRAY+16];
 
 	float				distanceCull;
 
@@ -1128,7 +1128,7 @@ Ghoul2 Insert End
 			int			flagHold;
 			int			teamHeals;
 			int			teamEnergizes;
-		} stats[MAX_CLIENTS];
+		} stats[MAX_CLIENTS_ARRAY];
 	} enhanced;
 	struct {
 		qboolean		detected;
@@ -1865,9 +1865,9 @@ typedef struct {
 	qhandle_t		inlineDrawModel[MAX_MODELS];
 	vec3_t			inlineModelMidpoints[MAX_MODELS];
 
-	clientInfo_t	clientinfo[MAX_CLIENTS];
+	clientInfo_t	clientinfo[MAX_CLIENTS_ARRAY];
 
-	char			clientOverride[MAX_CLIENTS][MAX_INFO_STRING];
+	char			clientOverride[MAX_CLIENTS_ARRAY][MAX_INFO_STRING];
 	char			redOverride[MAX_INFO_STRING];
 	char			blueOverride[MAX_INFO_STRING];
 	char			allOverride[MAX_INFO_STRING];
@@ -1905,7 +1905,7 @@ typedef struct siegeExtended_s
 } siegeExtended_t;
 
 //keep an entry available for each client
-extern siegeExtended_t cg_siegeExtendedData[MAX_CLIENTS];
+extern siegeExtended_t cg_siegeExtendedData[MAX_CLIENTS_ARRAY];
 
 //==============================================================================
 

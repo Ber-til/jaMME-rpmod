@@ -1255,6 +1255,7 @@ static int ParseCommandLine(char *cmdline, char **argv)
 #endif
 
 #include <Shlobj.h>
+#include <string>
 
 typedef struct {
 	string extension;

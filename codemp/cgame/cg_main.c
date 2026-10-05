@@ -625,6 +625,7 @@ Ghoul2 Insert End
 cg_t				cg;
 cgs_t				cgs;
 centity_t			cg_entities[MAX_GENTITIES];
+int					cgClientSlots = MAX_CLIENTS_LEGACY;	// MAX_CLIENTS, set from sv_maxclients
 
 centity_t			*cg_permanents[MAX_GENTITIES]; //rwwRMG - added
 int					cg_numpermanents = 0;
@@ -750,7 +751,7 @@ static void CG_ForceModelChange( void ) {
 		const char *clientInfo;
 		void *oldGhoul2;
 
-		clientInfo = CG_ConfigString( CS_PLAYERS+i );
+		clientInfo = CG_ConfigString( CS_PLAYER( i ) );
 		if ( !VALIDSTRING( clientInfo ) )
 			continue;
 
@@ -2262,7 +2263,7 @@ static void CG_RegisterClients( void ) {
 			continue;
 		}
 
-		clientInfo = CG_ConfigString( CS_PLAYERS+i );
+		clientInfo = CG_ConfigString( CS_PLAYER( i ) );
 		if ( !clientInfo[0]) {
 			continue;
 		}

@@ -108,7 +108,7 @@
 /*
 Ghoul2 Insert Start
 */
-#define CS_G2BONES				(CS_PLAYERS+MAX_CLIENTS)
+#define CS_G2BONES				(CS_PLAYERS+MAX_CLIENTS_LEGACY)
 //rww - used to be CS_CHARSKINS, but I have eliminated the need for that.
 /*
 Ghoul2 Insert End
@@ -126,6 +126,15 @@ Ghoul2 Insert End
 
 #if (CS_MAX) > MAX_CONFIGSTRINGS
 #error overflow: (CS_MAX) > MAX_CONFIGSTRINGS
+#endif
+
+// 64 player servers (RPMod) keep the vanilla layout above and put the
+// configstrings of clients 32-63 right after it
+#define CS_PLAYERS_EXTENDED		CS_MAX
+#define CS_PLAYER(clientNum)	((clientNum) < MAX_CLIENTS_LEGACY ? CS_PLAYERS+(clientNum) : CS_PLAYERS_EXTENDED+(clientNum)-MAX_CLIENTS_LEGACY)
+
+#if (CS_PLAYERS_EXTENDED+MAX_CLIENTS_EXTENDED-MAX_CLIENTS_LEGACY) > MAX_CONFIGSTRINGS
+#error overflow: (CS_PLAYERS_EXTENDED) > MAX_CONFIGSTRINGS
 #endif
 
 typedef enum {
@@ -1058,7 +1067,7 @@ typedef enum {
 #define TEAM_LOCATION_UPDATE_TIME		1000
 
 // How many players on the overlay
-#define TEAM_MAXOVERLAY		32
+#define TEAM_MAXOVERLAY		MAX_CLIENTS_ARRAY
 
 //team task
 typedef enum {

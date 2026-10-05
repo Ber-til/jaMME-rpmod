@@ -4943,7 +4943,7 @@ void CG_DrawSiegeInfo(centity_t *cent, float chX, float chY, float chW, float ch
 		return;
 	}
 
-	configstring = CG_ConfigString( cg.predictedPlayerState.clientNum + CS_PLAYERS );
+	configstring = CG_ConfigString( CS_PLAYER( cg.predictedPlayerState.clientNum ) );
 	v = Info_ValueForKey( configstring, "siegeclass" );
 
 	if (!v || !v[0])
