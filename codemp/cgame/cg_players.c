@@ -4979,7 +4979,7 @@ static void CG_PlayerSprites( centity_t *cent ) {
 		CG_PlayerFloatSprite( cent, cgs.media.vchatShader );
 	}
 	else if ( cent->currentState.eType != ET_NPC && //don't draw talk balloons on NPCs
-		(cent->currentState.eFlags & EF_TALK) )
+		(cent->currentState.eFlags & EF_TALK) && !mov_hideChatBubbles.integer )
 	{
 		CG_PlayerFloatSprite( cent, cgs.media.balloonShader );
 		return;

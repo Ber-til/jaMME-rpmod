@@ -12,6 +12,7 @@ mme_demoFileName        [text] Resets when loading demo, uses demo name from cur
                         project/[mme_demoFileName]/, capture/[mme_demoFileName]/
 mov_absorbShader        [0, 1] Make force absorb shader look like force protect shader
 mov_chatBeep            [0, 1] Turn off/on chat beep sound
+mov_hideChatBubbles     [0, 1] Hide the chat bubble shown above players while they are typing
 mov_seekInterval        [0..?.?] Set time interval in seconds that will be used in demo seeking
 mov_deltaYaw            [-?.?..?.?] Add additional angle in degrees around horizontal left-to-right axis (doesn't affect trueview)
 mov_deltaPitch          [-?.?..?.?] Add additional angle in degrees around vertical axis (doesn't affect trueview)
