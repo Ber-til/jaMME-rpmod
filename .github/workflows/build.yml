@@ -1,10 +1,11 @@
 name: build
 
 on:
-  # Run on pushes to tags, the "master" branch, and PR's
   push:
     branches:
       - master
+    tags:
+      - 'v*'
     paths-ignore:
       - '**.md'
       - '*.txt'
@@ -18,291 +19,136 @@ on:
 
 jobs:
   windows:
-    name: ${{ matrix.build_type }} Windows ${{ matrix.arch }}
-    runs-on: windows-2019
-    strategy:
-      matrix:
-        build_type: [Release]
-        arch: [ x86 ]
-        include:
-          - arch: x86
-            platform: Win32
-            pkg_suffix: x86
-
+    name: Windows x86
+    runs-on: windows-2025
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Configure CMake
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -A ${{ matrix.platform }} -T v141_xp
-
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        run: cmake --build . --config ${{ matrix.build_type }}
-
-      - name: Install
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        run: cmake --install . --config ${{ matrix.build_type }}
-
-      - name: Update readme
-        working-directory: ${{runner.workspace}}/jaMME/build/mme
-        shell: bash
-        run: |
-          sed -i "s/Date: .*..*..*/Date: $(date +"%d.%m.%Y")/" readme.txt
-          sed -i "s/Revision: .*/Revision: "$(git rev-parse --short HEAD)"/" readme.txt        
-
-      - name: Create binary archive
-        working-directory: ${{runner.workspace}}/jaMME/build
-        shell: bash
-        run: |
-          rm start_jaMME.command
-          rm start_jaMME.sh
+      # configures, builds, stamps the readme and zips into out/
+      - name: Build and package
+        shell: powershell
+        run: .\build_release.ps1
 
       - uses: actions/upload-artifact@v4
         with:
-          name: jamme-windows-${{ matrix.arch }}
-          path: ${{runner.workspace}}/jaMME/build/
+          name: jamme-windows-x86
+          path: out/jamme-windows-x86.zip
           if-no-files-found: error
 
-  ubuntu:
-    name: ${{ matrix.config }} Ubuntu ${{ matrix.arch }}
-    runs-on: ubuntu-20.04
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86, x86_64]
-        cc: [gcc]
-        cxx: [g++]
-        include:
-          - config: Release
-            rule: install
-          - arch: x86
-            use_sdl: true
-          - arch: x86_64
-            use_sdl: true
-
+  linux:
+    name: Linux x86_64
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Create Build Environment
+      - name: Install dependencies
         run: |
-          if [ ${{ matrix.arch }} == "x86" ]; then
-            sudo dpkg --add-architecture i386
-            sudo apt-get -qq update
-            sudo apt-get -y install aptitude
-            sudo apt-get -y install --allow-downgrades libpcre2-8-0=10.34-7 gcc-multilib g++-multilib ninja-build libjpeg-dev:i386 libpng-dev:i386 libcurl4-openssl-dev:i386 libmad0-dev:i386
-            sudo aptitude -y install libglib2.0-dev:i386 libsdl2-dev:i386
-          else
-            sudo apt-get -qq update
-            sudo apt-get install libjpeg-dev libpng-dev zlib1g-dev libsdl2-dev libmad0-dev
-          fi
-          cmake -E make_directory ${{runner.workspace}}/build
+          sudo apt-get -qq update
+          sudo apt-get install -y libsdl2-dev libmad0-dev zlib1g-dev libgl-dev
 
-      - name: Configure CMake
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          if [ ${{ matrix.arch }} == "x86" ]; then
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBuildAIO=OFF -DBuildCurl=OFF -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install -DCMAKE_TOOLCHAIN_FILE=CMakeModules/Toolchains/linux-i686.cmake
-          else
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBuildAIO=OFF -DBuildCurl=OFF -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install
-          fi
+      - name: Configure
+        run: cmake -S . -B out/release -DCMAKE_BUILD_TYPE=Release -DBuildCurl=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        run: cmake --build .
+        run: cmake --build out/release --parallel
 
+      # installs into the build/ release template
       - name: Install
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        run: cmake --install .
+        run: cmake --install out/release
 
-      - name: Update readme
-        working-directory: ${{runner.workspace}}/jaMME/build/mme
-        shell: bash
+      - name: Package
+        working-directory: build
         run: |
-          sed -i "s/Date: .*..*..*/Date: $(date +"%d.%m.%Y")/" readme.txt
-          sed -i "s/Revision: .*/Revision: "$(git rev-parse --short HEAD)"/" readme.txt        
-
-      - name: Create binary archive
-        working-directory: ${{runner.workspace}}/jaMME/build
-        shell: bash
-        run: |
-          chmod +x jamme
-          chmod +x start_jaMME.sh
-          rm start_jaMME.command
-          rm start_jaMME.cmd
-          tar -czvf jamme-linux-${{ matrix.arch }}.tar.gz      ./*
+          sed -i "s/Date: .*/Date: $(date +%d.%m.%Y)/; s/Revision: .*/Revision: $(git rev-parse --short HEAD)/" mme/readme.txt
+          rm start_jaMME.cmd start_jaMME.command
+          chmod +x jamme start_jaMME.sh
+          tar -czf ../out/jamme-linux-x86_64.tar.gz *
 
       - uses: actions/upload-artifact@v4
-        if: matrix.cc == 'gcc' && matrix.config == 'Release'
         with:
-          name: jamme-linux-${{ matrix.arch }}
-          path: ${{runner.workspace}}/jaMME/build/jamme-linux-${{ matrix.arch }}.tar.gz
+          name: jamme-linux-x86_64
+          path: out/jamme-linux-x86_64.tar.gz
           if-no-files-found: error
 
   macos:
-    name: ${{ matrix.config }} macOS ${{ matrix.arch }}
-    runs-on: macos-13
+    name: macOS ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        arch: [x86_64]
-        cc: [clang]
-        cxx: [clang++]
         include:
-          - config: Release
-            rule: install
-
+          - arch: x86_64
+            runner: macos-15-intel
+            cmake_args: ''
+          - arch: arm64
+            runner: macos-15
+            cmake_args: '-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Create Build Environment
-        run: |
-          brew install zlib libjpeg sdl2
-          cmake -E make_directory ${{runner.workspace}}/build
+      - name: Install dependencies
+        run: brew install sdl2
 
-      - name: Configure CMake
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install
+      - name: Configure
+        run: cmake -S . -B out/release -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ${{ matrix.cmake_args }}
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        run: cmake --build .
+        run: cmake --build out/release --parallel
 
+      # installs jamme.app (with the renderer inside) into the build/ release template
       - name: Install
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        run: cmake --install .
+        run: cmake --install out/release
 
-      - name: Update readme
-        working-directory: ${{runner.workspace}}/jaMME/build/mme
-        shell: bash
+      - name: Package
+        working-directory: build
         run: |
-          sed -i.bak "s/Date: .*..*..*/Date: $(date +"%d.%m.%Y")/" readme.txt
-          sed -i.bak "s/Revision: .*/Revision: "$(git rev-parse --short HEAD)"/" readme.txt          
-          rm readme.txt.bak
-
-      - name: Create binary archive
-        working-directory: ${{runner.workspace}}/jaMME/build
-        shell: bash
-        run: |
-          chmod +x jamme.app/Contents/MacOS/jamme
-          chmod +x start_jaMME.command
-          rm start_jaMME.cmd
-          rm start_jaMME.sh
-          tar -czvf jamme-macos-${{ matrix.arch }}.tar.gz      ./*
+          sed -i '' "s/Date: .*/Date: $(date +%d.%m.%Y)/; s/Revision: .*/Revision: $(git rev-parse --short HEAD)/" mme/readme.txt
+          rm start_jaMME.cmd start_jaMME.sh
+          chmod +x jamme.app/Contents/MacOS/jamme start_jaMME.command
+          tar -czf ../out/jamme-macos-${{ matrix.arch }}.tar.gz *
 
       - uses: actions/upload-artifact@v4
-        if: matrix.cc == 'clang' && matrix.config == 'Release'
         with:
           name: jamme-macos-${{ matrix.arch }}
-          path: ${{runner.workspace}}/jaMME/build/jamme-macos-${{ matrix.arch }}.tar.gz
+          path: out/jamme-macos-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
 
-  macos-arm64:
-    name: ${{ matrix.config }} macOS ${{ matrix.arch }}
-    runs-on: macos-14
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [arm64]
-        cc: [clang]
-        cxx: [clang++]
-        include:
-          - config: Release
-            rule: install
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create Build Environment
-        run: |
-          brew install zlib libjpeg sdl2
-          cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Configure CMake
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install
-
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        run: cmake --build .
-
-      - name: Install
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        run: cmake --install .
-
-      - name: Update readme
-        working-directory: ${{runner.workspace}}/jaMME/build/mme
-        shell: bash
-        run: |
-          sed -i.bak "s/Date: .*..*..*/Date: $(date +"%d.%m.%Y")/" readme.txt
-          sed -i.bak "s/Revision: .*/Revision: "$(git rev-parse --short HEAD)"/" readme.txt          
-          rm readme.txt.bak
-
-      - name: Create binary archive
-        working-directory: ${{runner.workspace}}/jaMME/build
-        shell: bash
-        run: |
-          chmod +x jamme.app/Contents/MacOS/jamme
-          chmod +x start_jaMME.command
-          rm start_jaMME.cmd
-          rm start_jaMME.sh
-          tar -czvf jamme-macos-${{ matrix.arch }}.tar.gz      ./*
-
-      - uses: actions/upload-artifact@v4
-        if: matrix.cc == 'clang' && matrix.config == 'Release'
-        with:
-          name: jamme-macos-${{ matrix.arch }}
-          path: ${{runner.workspace}}/jaMME/build/jamme-macos-${{ matrix.arch }}.tar.gz
-          if-no-files-found: error
-
-  create-release:
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    needs: [windows, ubuntu, macos, macos-arm64]
+  # pushes to master replace the rolling "latest" pre-release,
+  # v* tags get a permanent release of their own
+  release:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')))
+    needs: [windows, linux, macos]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-          submodules: recursive
+          path: dist
+          merge-multiple: true
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-    
-      - name: Display structure of downloaded files
-        run: ls -R
+      - name: List files
+        run: ls -l dist
 
-      - name: Create binary archives
+      - name: Publish versioned release
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          7z a -r jamme-windows-x86.zip       ./jamme-windows-x86/*
-          mv ./jamme-linux-x86/*              ./jamme-linux-x86.tar.gz
-          mv ./jamme-linux-x86_64/*           ./jamme-linux-x86_64.tar.gz
-          mv ./jamme-macos-x86_64/*           ./jamme-macos-x86_64.tar.gz
-          mv ./jamme-macos-arm64/*            ./jamme-macos-arm64.tar.gz
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "jaMME $GITHUB_REF_NAME" \
+            --generate-notes
 
-      - name: Create latest build
-        uses: crowbarmaster/GH-Automatic-Releases@latest
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          automatic_release_tag: "latest"
-          prerelease: false
-          title: Latest Build
-          files: |
-            *.zip
-            *.tar.gz
+      - name: Publish latest build
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest dist/* \
+            --title "Latest build" \
+            --notes "Automatic build of ${GITHUB_SHA::7} from ${GITHUB_REF_NAME}." \
+            --target "$GITHUB_SHA" \
+            --prerelease
