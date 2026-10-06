@@ -1133,14 +1133,26 @@ static void CG_RegisterSounds( void ) {
 
 
 	//[RGBSabers]
+	//RPMod ships its own RGB blade shaders, prefer them on RPMod servers
+	cgs.media.rgbSaberGlowShader = cgs.media.rgbSaberCoreShader = 0;
+	if (cg.rpmod.detected) {
+		cgs.media.rgbSaberGlowShader	= trap_R_RegisterShaderNoMip( "gfx/effects/sabers/rgb_glow" );
+		cgs.media.rgbSaberCoreShader	= trap_R_RegisterShaderNoMip( "gfx/effects/sabers/rgb_core" );
+	}
 	//if no ja++ shader
 		//then try ja+ shader
-	cgs.media.rgbSaberGlowShader		= trap_R_RegisterShaderNoMip( "gfx/effects/sabers/RGBglow1" );
+	if (!cgs.media.rgbSaberGlowShader)
+		cgs.media.rgbSaberGlowShader	= trap_R_RegisterShaderNoMip( "gfx/effects/sabers/RGBglow1" );
 	if (!cgs.media.rgbSaberGlowShader)
 		cgs.media.rgbSaberGlowShader	= trap_R_RegisterShaderNoMip( "gfx/effects/sabers/RGBGlow" );
-	cgs.media.rgbSaberCoreShader		= trap_R_RegisterShaderNoMip( "gfx/effects/sabers/RGBcore1" );
+	if (!cgs.media.rgbSaberGlowShader)
+		cgs.media.rgbSaberGlowShader	= trap_R_RegisterShaderNoMip( "gfx/effects/sabers/rgb_glow" );
+	if (!cgs.media.rgbSaberCoreShader)
+		cgs.media.rgbSaberCoreShader	= trap_R_RegisterShaderNoMip( "gfx/effects/sabers/RGBcore1" );
 	if (!cgs.media.rgbSaberCoreShader)
 		cgs.media.rgbSaberCoreShader	= trap_R_RegisterShaderNoMip( "gfx/effects/sabers/RGBLine" );
+	if (!cgs.media.rgbSaberCoreShader)
+		cgs.media.rgbSaberCoreShader	= trap_R_RegisterShaderNoMip( "gfx/effects/sabers/rgb_core" );
 
 	//Flame 1
 	cgs.media.rgbSaberGlow2Shader		= trap_R_RegisterShaderNoMip( "gfx/effects/sabers/RGBglow2" );

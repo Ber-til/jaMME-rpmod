@@ -1509,6 +1509,15 @@ CG_NewClientInfo
 void WP_SetSaber( int entNum, saberInfo_t *sabers, int saberNum, const char *saberName );
 //[RGBSabers]
 void ParseRGBSaber(char *str, vec3_t c);
+
+//RPMod sends RGB saber colours as "R,G,B" text in tc1/tc2, sometimes with spaces
+static qboolean CG_ParseSaberRGBText( const char *str, vec3_t rgb ) {
+	int r, g, b;
+	if ( sscanf( str, "%d , %d , %d", &r, &g, &b ) != 3 )
+		return qfalse;
+	VectorSet( rgb, Com_Clampi( 0, 255, r ), Com_Clampi( 0, 255, g ), Com_Clampi( 0, 255, b ) );
+	return qtrue;
+}
 //[/RGBSabers]
 void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	clientInfo_t *ci;
@@ -1690,6 +1699,8 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 
 	//[RGBSabers]
 	yo = ConfigValue( strings, "c3");
+	if (!skipColor && !yo[0] && CG_ParseSaberRGBText( ConfigValue( strings, "tc1" ), newInfo.rgb1 ))
+		skipColor = qtrue;
 	if (!skipColor) {
 		int red		= atoi(yo) & 255;
 		int green	= (atoi(yo) >> 8) & 255;
@@ -1704,6 +1715,8 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	}
 
 	yo = ConfigValue( strings, "c4");
+	if (!skipColor2 && !yo[0] && CG_ParseSaberRGBText( ConfigValue( strings, "tc2" ), newInfo.rgb2 ))
+		skipColor2 = qtrue;
 	if (!skipColor2) {
 		int red		= atoi(yo) & 255;
 		int green	= (atoi(yo) >> 8) & 255;
