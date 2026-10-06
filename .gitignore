@@ -271,3 +271,6 @@ CMakeScripts
 Makefile
 cmake_install.cmake
 install_manifest.txt
+# local build output (build_release.ps1) and Visual Studio folder
+out/
+.vs/
