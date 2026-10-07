@@ -1,8 +1,15 @@
-Jedi Academy Movie Maker's Edition
+Jedi Academy Movie Maker's Edition (RPMod Edition)
 ==================================
 [![build](https://github.com/entdark/jaMME/actions/workflows/build.yml/badge.svg)](https://github.com/entdark/jaMME/actions/workflows/build.yml)
 
 Jedi Academy Movie Maker's Edition (jaMME) is an engine modification of Jedi Academy for moviemaking. It's a port of q3mme with most of its features and some new ones. The modification is based on very early (May 2013th) version of OpenJK. Original source code belongs to Raven Software.
+
+This is a fork of the original mod, to add compatibility with features belonging to RPMod (by Fabien Crespel), to ensure a correct demo playback.
+
+# What's new #
+* allow demo playback with over 32 players (up to 64)
+* added cvar to hide chat bubbles
+* added compatibility with RPMod RGB sabers
 
 # Features #
 * demo playback control (pause, rewind)
